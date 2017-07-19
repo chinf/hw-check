@@ -1,0 +1,3 @@
+#!/bin/sh
+
+which hw-check > /dev/null && hw-check -wm root@localhost
