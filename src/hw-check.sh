@@ -32,7 +32,7 @@ log() { # level, message
 }
 
 output_report() { # [email subject]
-  if [ "${EMAIL}" -a "${REPORT}" ]; then
+  if [ "${EMAIL}" ]; then
     echo -e "${REPORT}" | mail -r "hw-check@`uname -n`" \
       -s "hw-check on `uname -n`: $*" "${EMAIL}"
   else
@@ -149,6 +149,8 @@ sensors_check() {
   if [ "${SENSORSERRORS}" ]; then
     log warn "sensors alarms:\n${SENSORSERRORS}"
     SUBJECT+="[sensors alarms]"
+  else
+    log info "No sensor alarms reported from lm-sensors"
   fi
 }
 
@@ -167,4 +169,6 @@ done
 
 # End hw-check
 log info "\nhw-check finished: `date`"
-output_report "${SUBJECT}"
+if [ "${REPORT}" ]; then
+  output_report "${SUBJECT}"
+fi
