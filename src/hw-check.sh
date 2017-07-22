@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # hw-check - Hardware health check and alerting
 # Copyright (C) 2017 Francis Chin <dev@fchin.com>
@@ -19,13 +19,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 log() { # level, message
-  local LEVEL=$1
+  local LEVEL="$1"
   shift 1
   case $LEVEL in
-    (inf*) if [ -z "${WARNONLY}" ]; then REPORT+="$*\n"; fi ;;
-    (war*) REPORT+="hw-check warning: $*\n" ;;
+    (inf*) if [ -z "${WARNONLY}" ]; then REPORT="${REPORT}$*\n"; fi ;;
+    (war*) REPORT="${REPORT}hw-check warning: $*\n" ;;
     *)
-      REPORT+="hw-check error: $*\n"
+      REPORT="${REPORT}hw-check error: $*\n"
       echo "hw-check error: $*" >&2
       ;;
   esac
@@ -33,18 +33,18 @@ log() { # level, message
 
 output_report() { # [email subject]
   if [ "${EMAIL}" ]; then
-    echo -e "${REPORT}" | mail -r "hw-check@`uname -n`" \
-      -s "hw-check on `uname -n`: $*" "${EMAIL}"
+    echo "${REPORT}" | mail -r "hw-check@`uname -n`" \
+      -s "hw-check on `uname -n`:$*" "${EMAIL}"
   else
-    echo -e "${REPORT}" >&1
+    echo "${REPORT}" >&1
   fi
 }
 
 #
 # Options
 #
-EDACLOG=/var/log/kern.log
-CHECKLIST="edac sensors"
+readonly EDACLOG="/var/log/kern.log"
+readonly CHECKLIST="edac sensors"
 print_usage() {
   echo "Usage: $0 [options]
 Hardware health check and alerting.
@@ -73,14 +73,14 @@ while getopts ":c:m:w" OPT; do
         fi
       done
       if [ "${VALIDCHECK}" ]; then
-        CHECKS+="${VALIDCHECK} "
+        CHECKS="${CHECKS} ${VALIDCHECK}"
       else
         print_usage
       fi
       ;;
     m)
       if [ "${OPTARG}" ]; then
-        EMAIL+="${OPTARG} "
+        EMAIL="${EMAIL} ${OPTARG}"
       else
         print_usage
       fi
@@ -103,7 +103,7 @@ edac_check() {
     1) 
       log error "No EDAC driver module loaded:\n${EDACSTATUS}"
       log error "Refer to documentation and check /etc/modules."
-      SUBJECT+="[EDAC drivers]"
+      SUBJECT="${SUBJECT} [EDAC drivers]"
       return 3
       ;;
     *)
@@ -111,7 +111,7 @@ edac_check() {
       # with executing edac-util command
       log error "${EDACSTATUS}"
       log error "Check that package 'edac-utils' is installed."
-      SUBJECT+="[edac-utils]"
+      SUBJECT="${SUBJECT} [edac-utils]"
       return 3
       ;;
   esac
@@ -120,7 +120,7 @@ edac_check() {
   EDACERRORS=`edac-util -q`
   if [ "${EDACERRORS}" ]; then
     log warn `edac-util -v`
-    SUBJECT+="[hardware errors]"
+    SUBJECT="${SUBJECT} [hardware errors]"
   else
     log info "No hardware errors reported from edac-util"
   fi
@@ -130,7 +130,7 @@ edac_check() {
   | grep -e "\[Hardware Error\]")
   if [ "${LOGERRORS}" ]; then
     log warn "${LOGERRORS}"
-    SUBJECT+="[logged hardware errors]"
+    SUBJECT="${SUBJECT} [logged hardware errors]"
   else
     log info "No hardware errors reported in ${EDACLOG}"
   fi
@@ -140,7 +140,7 @@ sensors_check() {
   SENSORSSTATUS=`sensors`
   if [ $? -ne 0 ]; then
     log error "${SENSORSSTATUS}"
-    SUBJECT+="[lm-sensors]"
+    SUBJECT="${SUBJECT} [lm-sensors]"
     return 3
   fi
 
@@ -148,7 +148,7 @@ sensors_check() {
   SENSORSERRORS=$(env LC_ALL=C echo "${SENSORSSTATUS}" | grep "ALARM")
   if [ "${SENSORSERRORS}" ]; then
     log warn "sensors alarms:\n${SENSORSERRORS}"
-    SUBJECT+="[sensors alarms]"
+    SUBJECT="${SUBJECT} [sensors alarms]"
   else
     log info "No sensor alarms reported from lm-sensors"
   fi
